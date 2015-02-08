@@ -294,6 +294,12 @@ AC_ARG_WITH(
 	[with_plugindir="\$(libdir)/openvpn/plugins"]
 )
 
+AC_ARG_WITH(
+	[backend-tlspool],
+	[AS_HELP_STRING([--with-backend-tlspool],[handle TLS connections via a TLS Pool [default=no]])],
+	[with_backend_tlspool="yes"]
+)
+
 
 AC_DEFINE_UNQUOTED([TARGET_ALIAS], ["${host}"], [A string representing our host])
 case "$host" in
@@ -775,6 +781,16 @@ PKG_CHECK_MODULES(
 	)]
 )
 
+PKG_CHECK_MODULES(
+	[TLSPOOL_SSL],
+	[tlspool >= 0.0.0],
+	[AC_CHECK_HEADERS(
+		[tlspool/commands.h],
+		[have_tlspool="yes"],
+		[have_tlspool="yes"]	#TODO#
+	)]
+)
+
 if test "${have_openssl_crypto}" = "yes"; then
 	saved_CFLAGS="${CFLAGS}"
 	saved_LIBS="${LIBS}"
@@ -1160,6 +1176,16 @@ if test "${enable_plugin_auth_pam}" = "yes"; then
 	fi
 fi
 
+if test "${with_backend_tlspool}" = "yes"; then
+	if test "${have_tlspool}" = "yes"; then
+		AC_DEFINE([ENABLE_BACKEND_TLSPOOL], [1], [Use the TLS Pool backend])
+		old_CFLAGS="${CFLAGS}"
+		CFLAGS="${CFLAGS} ${TLSPOOL_SSL_CFLAGS}"
+	else
+		AC_MSG_ERROR([TLS Pool is not installed])
+	fi
+fi
+
 CONFIGURE_DEFINES="`set | grep '^enable_.*=' ; set | grep '^with_.*='`"
 AC_DEFINE_UNQUOTED([CONFIGURE_DEFINES], ["`echo ${CONFIGURE_DEFINES}`"], [Configuration settings])
 
@@ -1223,3 +1249,4 @@ AC_CONFIG_FILES([
 ])
 AC_CONFIG_FILES([tests/t_client.sh], [chmod +x tests/t_client.sh])
 AC_OUTPUT
+

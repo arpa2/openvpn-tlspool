@@ -547,6 +547,11 @@ static const char usage_message[] =
   "                  number, such as 1 (default), 2, etc.\n"
   "--ca file       : Certificate authority file in .pem format containing\n"
   "                  root certificate.\n"
+#ifdef ENABLE_BACKEND_TLSPOOL
+  "--tlspool-path  : Set the path to the UNIX domain socket of the TLS Pool\n"
+  "--local-id      : Local  identity (hostname or user@domain.name) for TLS Pool.\n"
+  "--remote-id     : Remote identity (hostname or user@domain.name) for TLS Pool.\n"
+#endif
 #ifndef ENABLE_CRYPTO_POLARSSL
   "--capath dir    : A directory of trusted certificates (CAs"
   " and CRLs).\n"
@@ -1621,6 +1626,11 @@ show_settings (const struct options *o)
   SHOW_BOOL (tls_exit);
 
   SHOW_STR (tls_auth_file);
+#ifdef ENABLE_TLSPOOL_BACKEND
+  SHOW_STR (tlspool_path);
+  SHOW_STR (local_id);
+  SHOW_STR (remote_id);
+#endif
 #endif /* ENABLE_CRYPTO */
 
 #ifdef ENABLE_PKCS11
@@ -2169,6 +2179,7 @@ options_postprocess_verify_ce (const struct options *options, const struct conne
 	   }
 	 else
 #endif
+#ifndef ENABLE_BACKEND_TLSPOOL
 #ifdef ENABLE_CRYPTOAPI
      if (options->cryptoapi_cert)
 	{
@@ -2186,6 +2197,7 @@ options_postprocess_verify_ce (const struct options *options, const struct conne
 #endif
 	}
       else
+#endif
 #endif
       if (options->pkcs12_file)
         {
@@ -2206,6 +2218,7 @@ options_postprocess_verify_ce (const struct options *options, const struct conne
         }
       else
         {
+#ifndef ENABLE_BACKEND_TLSPOOL
 #ifdef ENABLE_CRYPTO_POLARSSL
 	  if (!(options->ca_file))
 	    msg(M_USAGE, "You must define CA file (--ca)");
@@ -2214,6 +2227,7 @@ options_postprocess_verify_ce (const struct options *options, const struct conne
 #else
 	  if ((!(options->ca_file)) && (!(options->ca_path)))
 	    msg(M_USAGE, "You must define CA file (--ca) or CA path (--capath)");
+#endif
 #endif
 	  if (pull)
 	    {
@@ -2228,10 +2242,12 @@ options_postprocess_verify_ce (const struct options *options, const struct conne
 
 	      if (sum == 0)
 		{
+#ifndef ENABLE_BACKEND_TLSPOOL
 #if P2MP
 		  if (!options->auth_user_pass_file)
 #endif
 		    msg (M_USAGE, "No client-side authentication method is specified.  You must use either --cert/--key, --pkcs12, or --auth-user-pass");
+#endif
 		}
 	      else if (sum == 2)
 		;
@@ -6552,6 +6568,23 @@ add_option (struct options *options,
       VERIFY_PERMISSION (OPT_P_GENERAL);
       options->verify_hash = parse_hash_fingerprint(p[1], SHA_DIGEST_LENGTH, msglevel, &options->gc);
     }
+#ifdef ENABLE_TLSPOOL_BACKEND
+  else if (streq (p[0], "tlspool-path"))
+    {
+      VERIFY_PERMISSION (OPT_P_GENERAL);
+      options->tlspool_path = p[1];
+    }
+  else if (streq (p[0], "local-id"))
+    {
+      VERIFY_PERMISSION (OPT_P_GENERAL);
+      options->local_id = p[1];
+    }
+  else if (streq (p[0], "remote-id"))
+    {
+      VERIFY_PERMISSION (OPT_P_GENERAL);
+      options->remote_id = p[1];
+    }
+#endif
 #ifdef ENABLE_CRYPTOAPI
   else if (streq (p[0], "cryptoapicert") && p[1])
     {

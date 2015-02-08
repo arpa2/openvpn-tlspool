@@ -1,0 +1,142 @@
+Running OpenVPN with a TLS Pool backend
+=======================================
+
+OpenVPN has a malleable TLS backend, and one of the options available to it
+is the TLS Pool.  This approach is documented on http://tlspool.arpa2.net
+
+
+Motivations for the TLS Pool backend
+------------------------------------
+
+The TLS Pool introduces several reasons that make it more attractive than
+an everyday library-based TLS solution:
+
+* Isolation of TLS credentials from application logic
+* Support for hardware token storage of credentials
+* Support for a plethora of TLS protocol extensions
+* Support for TLS configuration provisioning
+
+These aspects make the TLS Pool an interesting option from motivations of
+security and operational control.  OpenVPN is often used with large
+infrastructures, and TLS Pool can help to control it in line with these
+requirements of such large-scale environments.
+
+
+Building instructions
+---------------------
+
+To use the TLS Pool as a backend to OpenVPN, use the following option
+during configuration:
+
+	./configure --with-backend-tlspool
+
+This will make the TLS backend contact a daemon run in an isolated process
+on the local machine. This TLS Pool implements the TLS protocol and all its
+authentication and encryption facilities, external to OpenVPN.  What the
+TLS Pool does not provide, are the routines that OpenVPN requires to perform
+session encryption with the TLS-negotiated session key; for this, it still
+needs a crypto library, which is configured with --with-crypto-library and
+is usually setup with OpenSSL or PolarSSL.  This means that either of the
+following configurations is perfectly feasible:
+
+	./configure --with-backend-tlspool --with-crypto-library=openssl
+	./configure --with-backend-tlspool --with-crypto-library=polarssl
+
+As should be clear from this, is that the following cannot be done:
+
+	# ./configure --with-backend-tlspool --with-crypto-library=tlspool
+
+Also note that there is no value in using --with-backend-pkcs11 for any other
+reason than the use of efficient crypto hardware for session encryption.
+So, under normal circumstances, this flag should not be used; the support
+for PKCS #11 in the TLS Pool is arranged by the daemon process, and does
+not need to be supported by applications such as OpenVPN.
+
+From here on, compilation proceeds as normal for OpenVPN.
+
+
+Packaging instructions
+----------------------
+
+When OpenVPN is built against the TLS Pool backend, it becomes dependent
+on the presence of a TLS Pool daemon on the same system.
+
+In addition, tools that support the creation of credentials for the
+TLS Pool and/or PKCS #11 may be useful to hint at.
+
+In addition, tools that support provisioning may be useful to hint at,
+specifically the Pulley component from the SteamWorks toolkit.
+
+
+Installation instructions
+-------------------------
+
+OpenVPN with TLS Pool backend should be installed on a system that also
+runs a TLS Pool daemon.  As a result of this, it also requires an
+implementation of the PKCS #11 API, be it as a reference to cryptographic
+hardware or a software module.
+
+The configuration of OpenVPN normally defines credentials for use with the
+TLS protocol; notably, a certificate authority, a server certificate and
+a client certificate and key.  These should not be configured and will in
+fact lead to runtime errors.  The setup of such information is concentrated
+at the TLS Pool, which takes care of the TLS exchange.
+
+Note that the TLS Pool is capable of other forms of secure exchange than
+the X.509 certificate-based approach.  Among the TLS extensions that are
+supported are generally OpenPGP key-based mechanisms, and even Secure
+Remote Passwords provide a powerful mechanism based on passwords that
+provide cryptographically advanced features like Forward Secrecy and a
+Zero-Knowledge Proof.  None of this requires support in OpenVPN after
+the control over TLS has been migrated to the TLS Pool backend.
+
+What needs to be setup in OpenVPN, are the desired identities of the
+client and/or server.  These take the form of a DoNAI, as documented on
+http://donai.arpa2.net -- briefly put, either a domain name or the form
+user@domain.  These identities will be used by the TLS Pool to locate
+and/or validate local and remote identities used in the TLS handshake.
+
+Users will run a separate graphical facility on which they enter a PIN
+for access the PKCS #11 underneath the TLS Pool.  This must not be
+implemented as part of OpenVPN, since the perspective of the TLS Pool
+is that the PIN is related to the transport and must be clearly
+identifiable as originating from that context.  This means that the
+security of TLS does not hinge on the security of the application, which
+is in general a good idea, considering how frivolous the logic of some
+applications can be.
+
+The aspects remaining in the configuration of OpenVPN concern issues of
+routing, DNS, DHCP and so on.  The clear separation of logic between the
+OpenVPN and TLS Pool should be helpful in its administrative handling.
+
+
+User instructions
+-----------------
+
+To connect to a remote network, you start the OpenVPN program.  To validate
+your identity, it uses a background program named the TLS Pool. which holds
+your credentials.  The TLS Pool may serve many other programs, and not just
+the OpenVPN program, so its interface might already be familiar to you.
+
+The most basic use of the TLS Pool constitutes entering a PIN when using
+the credentials that it protects.  Your use of OpenVPN needs those credentials
+in the process of proving your identity to the remote end, so expect to be
+entering your PIN as part of the connection setup with OpenVPN.  This PIN
+entry request always looks the same, and it is part of the TLS Pool software
+that you are probably for many other applications.  You can easily identify
+it, and should be cautious not to enter the PIN in other popups or
+requesters.
+
+
+Inasfar as the TLS Pool encases long-term credentials, these can be setup by
+you or, if your administrator has setup the TLS Pool with automated remote
+provisioning, by an automated procedure.  If you control the credentials you
+may need to refresh your credentials once in a while; for instance, once a
+year.  If your admin takes care of it, you should not need to do any such
+thing.
+
+Among the options is also one that avoids such long-term credentials, based
+on the short-term credentials of Kerberos (or "domain logon"), which requires
+a single logon per day to do all of your days work without further
+authentication or PIN entry.
+

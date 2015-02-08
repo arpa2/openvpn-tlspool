@@ -501,6 +501,9 @@ struct options
   /* TLS (control channel) parms */
   bool tls_server;
   bool tls_client;
+  const char *tlspool_path;
+  const char *local_id;
+  const char *remote_id;
   const char *ca_file;
   const char *ca_path;
   const char *dh_file;

@@ -36,12 +36,22 @@
 #include "misc.h"
 #include "ssl_common.h"
 
+/**
+ * Note that the ENABLE_BACKEND_TLSPOOL will replace the TLS routines, but
+ * it still relies on either ENABLE_CRYPTO_OPENSSL or ENABLE_CRYPTO_POLARSSL
+ * for the algorithm implementation of the session crypto.
+ */
+
 /* Include OpenSSL-specific code */
 #ifdef ENABLE_CRYPTO_OPENSSL
+#ifndef ENABLE_BACKEND_TLSPOOL
 #include "ssl_verify_openssl.h"
 #endif
+#endif
 #ifdef ENABLE_CRYPTO_POLARSSL
+#ifndef ENABLE_BACKEND_TLSPOOL
 #include "ssl_verify_polarssl.h"
+#endif
 #endif
 
 #include "ssl_verify_backend.h"

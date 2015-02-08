@@ -273,7 +273,8 @@ struct openvpn_plugin_callbacks
 typedef enum {
   SSLAPI_NONE,
   SSLAPI_OPENSSL,
-  SSLAPI_POLARSSL
+  SSLAPI_POLARSSL,
+  SSLAPI_TLSPOOL
 } ovpnSSLAPI;
 
 /**

@@ -33,15 +33,31 @@
 
 #include "buffer.h"
 
+/**
+ * Note that the ENABLE_BACKEND_TLSPOOL will replace the TLS routines, but
+ * it still relies on either ENABLE_CRYPTO_OPENSSL or ENABLE_CRYPTO_POLARSSL
+ * for the algorithm implementation of the session crypto.
+ */
+
 #ifdef ENABLE_CRYPTO_OPENSSL
+#ifdef ENABLE_BACKEND_TLSPOOL
+#include "ssl_tlspool.h"
+#define SSLAPI SSLAPI_TLSPOOL
+#else
 #include "ssl_openssl.h"
 #include "ssl_verify_openssl.h"
 #define SSLAPI SSLAPI_OPENSSL
 #endif
+#endif
 #ifdef ENABLE_CRYPTO_POLARSSL
+#ifdef ENABLE_BACKEND_TLSPOOL
+#include "ssl_tlspool.h"
+#define SSLAPI SSLAPI_TLSPOOL
+#else
 #include "ssl_polarssl.h"
 #include "ssl_verify_polarssl.h"
 #define SSLAPI SSLAPI_POLARSSL
+#endif
 #endif
 
 /* Ensure that SSLAPI got a sane value if SSL is disabled or unknown */
